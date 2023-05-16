@@ -27,23 +27,25 @@ func (l SkipLists) Get(i int) (s skips) {
 }
 
 type Generator struct {
-	isPtrRecv  bool
-	maxDepth   int
-	methodName string
-	skipLists  SkipLists
+	isPtrRecv    bool
+	isNeedExport bool
+	maxDepth     int
+	methodName   string
+	skipLists    SkipLists
 
 	imports map[string]string
 	fns     [][]byte
 }
 
 func NewGenerator(
-	isPtrRecv bool, methodName string, skipLists SkipLists, maxDepth int,
+	isPtrRecv bool, isNeedExport bool, methodName string, skipLists SkipLists, maxDepth int,
 ) Generator {
 	return Generator{
-		isPtrRecv:  isPtrRecv,
-		methodName: methodName,
-		maxDepth:   maxDepth,
-		skipLists:  skipLists,
+		isPtrRecv:    isPtrRecv,
+		isNeedExport: isNeedExport,
+		methodName:   methodName,
+		maxDepth:     maxDepth,
+		skipLists:    skipLists,
 
 		imports: map[string]string{},
 		fns:     [][]byte{},
@@ -115,8 +117,8 @@ func (g Generator) generateFunc(p *packages.Package, obj object, skips skips, ge
 	source := "o"
 	fmt.Fprintf(&buf, `// %s generates a deep copy of %s%s
 func (o %s%s) %s() %s%s {
-	var cp %s = %s%s
-`, g.methodName, ptr, kind, ptr, kind, g.methodName, ptr, kind, kind, ptr, source)
+	var cp  = %s%s
+`, g.methodName, ptr, kind, ptr, kind, g.methodName, ptr, kind, ptr, source)
 
 	g.walkType(source, "cp", p.Name, obj, &buf, skips, generating, 0)
 
@@ -175,11 +177,11 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		}
 	}
 
-	var needExported bool
+	needExported := g.isNeedExport
 	switch v := m.(type) {
 	case *types.Named:
 		if v.Obj().Pkg() != nil && v.Obj().Pkg().Name() != x {
-			needExported = true
+			needExported = needExported && true
 		}
 	}
 
@@ -262,13 +264,7 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		}
 
 		fmt.Fprintf(w, "}\n")
-	case *types.Chan:
-		kind := g.getElemType(v.Elem(), x)
 
-		fmt.Fprintf(w, `if %s != nil {
-	%s = make(chan %s, cap(%s))
-}
-`, source, sink, kind, source)
 	case *types.Map:
 		kkind := g.getElemType(v.Key(), x)
 		vkind := g.getElemType(v.Elem(), x)
@@ -328,6 +324,29 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		fmt.Fprintf(w, "%s[%s] = %s", sink, ksink, vsink)
 
 		fmt.Fprintf(w, "}\n}\n")
+	// 只支持实现了DeepCopy方法的Interface
+	case *types.Interface:
+		fmt.Fprintf(w, "if %s != nil {\n", source)
+		named, ok := m.(*types.Named)
+		if !ok {
+			log.Fatalf("not supported deepcopy unamed interface %s", sink)
+		}
+		originMethodName := g.methodName
+		g.methodName = g.methodName + named.Obj().Name()
+		if initial || !g.reuseDeepCopy(source, sink, v, false, generating, w) {
+			log.Fatalf("not supported deepcopy interface %s without %s method", sink, g.methodName)
+		}
+		g.methodName = originMethodName
+		fmt.Fprintf(w, "}\n")
+	case *types.Chan:
+		log.Fatalf("not supported deepcopy channel %s", sink)
+		//	case *types.Chan:
+		//		kind := g.getElemType(v.Elem(), x)
+		//
+		//		fmt.Fprintf(w, `if %s != nil {
+		//	%s = make(chan %s, cap(%s))
+		//}
+		//`, source, sink, kind, source)
 	}
 }
 

@@ -14,9 +14,10 @@ import (
 )
 
 var (
-	pointerReceiverF = flag.Bool("pointer-receiver", false, "the generated receiver type")
+	pointerReceiverF = flag.Bool("pointer-receiver", true, "the generated receiver type")
 	maxDepthF        = flag.Int("maxdepth", 0, "max depth of deep copying")
 	methodF          = flag.String("method", "DeepCopy", "deep copy method name")
+	needExportF      = flag.Bool("needexport", false, " deep copy not export filed")
 
 	typesF  typesVal
 	skipsF  skipsVal
@@ -109,7 +110,7 @@ func (f *outputVal) Open() (io.WriteCloser, error) {
 func init() {
 	flag.Var(&typesF, "type", "the concrete type. Multiple flags can be specified")
 	flag.Var(&skipsF, "skip", "comma-separated field/slice/map selectors to shallow copy. Multiple flags can be specified")
-	flag.Var(&outputF, "o", "the output file to write to. Defaults to STDOUT")
+	flag.Var(&outputF, "o", "the output file to write to. Defaults to deepcopy_gen.go on same dir")
 }
 
 func main() {
@@ -124,7 +125,14 @@ func main() {
 	}
 
 	sl := deepcopy.SkipLists(skipsF)
-	generator := deepcopy.NewGenerator(*pointerReceiverF, *methodF, sl, *maxDepthF)
+	generator := deepcopy.NewGenerator(*pointerReceiverF, *needExportF, *methodF, sl, *maxDepthF)
+
+	if outputF.String() == "" {
+		err := outputF.Set(flag.Args()[0] + "deepcopy_gen.go")
+		if err != nil {
+			log.Fatalln(err)
+		}
+	}
 
 	output, err := outputF.Open()
 	if err != nil {
