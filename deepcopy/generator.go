@@ -149,6 +149,8 @@ func (g Generator) generateFile(w io.Writer, p *packages.Package) error {
 			}
 			file.WriteString(")\n")
 		}
+	} else {
+		fmt.Fprintf(&file, "\n")
 	}
 
 	for _, fn := range g.fns {
