@@ -298,7 +298,7 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		var b bytes.Buffer
 
 		if !skipKey {
-			copyKSink := selToIdent(sink) + "_" + key
+			copyKSink := CamelCaseLower(selToIdent(sink)+"_"+key, "_")
 			g.walkType(key, copyKSink, x, v.Key(), &b, skips, generating, depth)
 
 			if b.Len() > 0 {
@@ -311,7 +311,7 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		b.Reset()
 
 		if !skipValue {
-			copyVSink := selToIdent(sink) + "_" + val
+			copyVSink := CamelCaseLower(selToIdent(sink)+"_"+val, "_")
 			g.walkType(val, copyVSink, x, v.Elem(), &b, skips, generating, depth)
 
 			if b.Len() > 0 {
@@ -486,4 +486,28 @@ func selToIdent(sel string) string {
 			return r
 		}
 	}, sel)
+}
+
+func Split(s0, sep string) []string {
+	s := strings.TrimSpace(s0)
+	l := strings.Split(s, sep)
+
+	r := l[:0]
+	for _, str := range l {
+		r = append(r, strings.TrimSpace(str))
+	}
+
+	return r
+}
+
+func CamelCaseLower(str, sep string) string {
+	s := strings.TrimSpace(str)
+	l := Split(s, sep)
+
+	r := l[:1]
+	for _, se := range l[1:] {
+		sr := strings.ToUpper(se[:1]) + se[1:]
+		r = append(r, sr)
+	}
+	return strings.Join(r, "")
 }
