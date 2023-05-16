@@ -17,11 +17,23 @@ var (
 	pointerReceiverF = flag.Bool("pointer-receiver", true, "the generated receiver type")
 	maxDepthF        = flag.Int("maxdepth", 0, "max depth of deep copying")
 	methodF          = flag.String("method", "DeepCopy", "deep copy method name")
-	needExportF      = flag.Bool("needexport", false, " deep copy not export filed")
+	needExportF      = flag.Bool("needexport", false, " deep copy not export private filed")
+	appendOutFileF   = flag.Bool("append", false, "append to output file(not truncate file)")
 
 	typesF  typesVal
 	skipsF  skipsVal
 	outputF outputVal
+)
+
+type (
+	Foo struct {
+		ID   int64
+		Name string
+	}
+
+	Alpha struct {
+		Version string
+	}
 )
 
 type typesVal []string
@@ -84,7 +96,7 @@ func (f *outputVal) Set(v string) error {
 		return nil
 	}
 
-	file, err := os.OpenFile(v, os.O_RDWR|os.O_CREATE, 0o666)
+	file, err := os.OpenFile(v, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0o666)
 	if err != nil {
 		return fmt.Errorf("opening file: %v", v)
 	}
@@ -95,10 +107,11 @@ func (f *outputVal) Set(v string) error {
 	return nil
 }
 
-func (f *outputVal) Open() (io.WriteCloser, error) {
+func (f *outputVal) Open(appendFile bool) (io.WriteCloser, error) {
 	if f.file == nil {
 		f.file = os.Stdout
-	} else {
+	} else if !appendFile {
+		log.Printf("Truncating %s\n", f.name)
 		err := f.file.Truncate(0)
 		if err != nil {
 			return nil, err
@@ -109,7 +122,7 @@ func (f *outputVal) Open() (io.WriteCloser, error) {
 }
 
 func init() {
-	flag.Var(&typesF, "type", "the concrete type. Multiple flags can be specified or use comma to separate multiple types")
+	flag.Var(&typesF, "type", "the concrete type. Multiple flags can be specified or comma-separated multiple types")
 	flag.Var(&skipsF, "skip", "comma-separated field/slice/map selectors to shallow copy. Multiple flags can be specified")
 	flag.Var(&outputF, "o", "the output file to write to. Defaults to deepcopy_gen.go on same dir")
 }
@@ -126,7 +139,7 @@ func main() {
 	}
 
 	sl := deepcopy.SkipLists(skipsF)
-	generator := deepcopy.NewGenerator(*pointerReceiverF, *needExportF, *methodF, sl, *maxDepthF)
+	generator := deepcopy.NewGenerator(*pointerReceiverF, *needExportF, *appendOutFileF, *methodF, sl, *maxDepthF)
 
 	if outputF.String() == "" {
 		err := outputF.Set(flag.Args()[0] + "deepcopy_gen.go")
@@ -135,7 +148,7 @@ func main() {
 		}
 	}
 
-	output, err := outputF.Open()
+	output, err := outputF.Open(*appendOutFileF)
 	if err != nil {
 		log.Fatalln("Error initializing output file:", err)
 	}
