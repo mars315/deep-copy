@@ -111,7 +111,6 @@ func (f *outputVal) Open(appendFile bool) (io.WriteCloser, error) {
 	if f.file == nil {
 		f.file = os.Stdout
 	} else if !appendFile {
-		log.Printf("Truncating %s\n", f.name)
 		err := f.file.Truncate(0)
 		if err != nil {
 			return nil, err
