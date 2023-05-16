@@ -31,7 +31,8 @@ func (f *typesVal) String() string {
 }
 
 func (f *typesVal) Set(v string) error {
-	*f = append(*f, v)
+	list := strings.Split(v, ",")
+	*f = append(*f, list...)
 	return nil
 }
 
@@ -108,7 +109,7 @@ func (f *outputVal) Open() (io.WriteCloser, error) {
 }
 
 func init() {
-	flag.Var(&typesF, "type", "the concrete type. Multiple flags can be specified")
+	flag.Var(&typesF, "type", "the concrete type. Multiple flags can be specified or use comma to separate multiple types")
 	flag.Var(&skipsF, "skip", "comma-separated field/slice/map selectors to shallow copy. Multiple flags can be specified")
 	flag.Var(&outputF, "o", "the output file to write to. Defaults to deepcopy_gen.go on same dir")
 }
