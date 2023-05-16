@@ -183,6 +183,9 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		if v.Obj().Pkg() != nil && v.Obj().Pkg().Name() != x {
 			needExported = needExported && true
 		}
+		if !needExported {
+			return
+		}
 	}
 
 	if v, ok := m.(methoder); ok && !initial && g.reuseDeepCopy(source, sink, v, false, generating, w) {
@@ -329,12 +332,15 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		fmt.Fprintf(w, "if %s != nil {\n", source)
 		named, ok := m.(*types.Named)
 		if !ok {
-			log.Fatalf("not supported deepcopy unamed interface %s", sink)
+			log.Printf("not supported deepcopy unamed interface %s\n", sink)
+			return
 		}
 		originMethodName := g.methodName
 		g.methodName = g.methodName + named.Obj().Name()
 		if initial || !g.reuseDeepCopy(source, sink, v, false, generating, w) {
-			log.Fatalf("not supported deepcopy interface %s without %s method", sink, g.methodName)
+			log.Printf("not supported deepcopy interface %s without %s method\n", sink, g.methodName)
+			g.methodName = originMethodName
+			return
 		}
 		g.methodName = originMethodName
 		fmt.Fprintf(w, "}\n")
