@@ -28,27 +28,27 @@ func (l SkipLists) Get(i int) (s skips) {
 }
 
 type Generator struct {
-	isPtrRecv    bool
-	isNeedExport bool
-	isAppendFile bool
-	maxDepth     int
-	methodName   string
-	skipLists    SkipLists
+	isPtrRecv           bool
+	isNeedExportPrivate bool
+	isAppendFile        bool
+	maxDepth            int
+	methodName          string
+	skipLists           SkipLists
 
 	imports map[string]string
 	fns     [][]byte
 }
 
 func NewGenerator(
-	isPtrRecv, isNeedExport, isAppendFile bool, methodName string, skipLists SkipLists, maxDepth int,
+	isPtrRecv, isNeedExportPrivate, isAppendFile bool, methodName string, skipLists SkipLists, maxDepth int,
 ) Generator {
 	return Generator{
-		isPtrRecv:    isPtrRecv,
-		isNeedExport: isNeedExport,
-		isAppendFile: isAppendFile,
-		methodName:   methodName,
-		maxDepth:     maxDepth,
-		skipLists:    skipLists,
+		isPtrRecv:           isPtrRecv,
+		isNeedExportPrivate: isNeedExportPrivate,
+		isAppendFile:        isAppendFile,
+		methodName:          methodName,
+		maxDepth:            maxDepth,
+		skipLists:           skipLists,
 
 		imports: map[string]string{},
 		fns:     [][]byte{},
@@ -183,7 +183,7 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		}
 	}
 
-	needExported := g.isNeedExport
+	needExported := g.isNeedExportPrivate
 	//switch v := m.(type) {
 	//case *types.Named:
 	//	if v.Obj().Pkg() != nil && v.Obj().Pkg().Name() != x {

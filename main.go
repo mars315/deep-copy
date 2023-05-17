@@ -20,11 +20,11 @@ func init() {
 }
 
 var (
-	pointerReceiverF = flag.Bool("pointer-receiver", true, "the generated receiver type")
-	maxDepthF        = flag.Int("maxdepth", 0, "max depth of deep copying")
-	methodF          = flag.String("method", "DeepCopy", "deep copy method name")
-	needExportF      = flag.Bool("needexport", false, " deep copy not export private filed")
-	appendOutFileF   = flag.Bool("append", false, "append to output file(not truncate file)")
+	pointerReceiverF   = flag.Bool("pointer-receiver", true, "the generated receiver type")
+	maxDepthF          = flag.Int("maxdepth", 0, "max depth of deep copying")
+	methodF            = flag.String("method", "DeepCopy", "deep copy method name")
+	needExportPrivateF = flag.Bool("export-private", false, " deep copy private filed")
+	appendOutFileF     = flag.Bool("append", false, "append to output file(not truncate file)")
 
 	typesF  typesVal
 	skipsF  skipsVal
@@ -128,7 +128,7 @@ func main() {
 	}
 
 	sl := deepcopy.SkipLists(skipsF)
-	generator := deepcopy.NewGenerator(*pointerReceiverF, *needExportF, *appendOutFileF, *methodF, sl, *maxDepthF)
+	generator := deepcopy.NewGenerator(*pointerReceiverF, *needExportPrivateF, *appendOutFileF, *methodF, sl, *maxDepthF)
 
 	if outputF.String() == "" {
 		err := outputF.Set(flag.Args()[0] + "deepcopy_gen.go")
