@@ -133,3 +133,22 @@ func (o Foo) DeepCopy() Foo {
 	return cp
 }
 ```
+
+
+## Something changed
+1. add comma-separated multiple types
+```go
+//
+//go:generate deep-copy --type Foo --type Bar ./path/to/pkg
+//or
+//
+//go:generate deep-copy --type Foo,Bar ./path/to/pkg
+
+```
+2. add flag `--append` to append generated code to the file
+```go
+//go:generate deep-copy --type Foo --type Bar ./path/to/pkg
+//go:generate deep-copy --append --type Foo --type Bar ./path/to/pkg
+```
+3. support interface type which have `DeepCopy()` method
+4. support tag `deepcopy:"-"` to skip deep copy

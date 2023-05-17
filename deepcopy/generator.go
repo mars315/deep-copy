@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -183,15 +184,15 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 	}
 
 	needExported := g.isNeedExport
-	switch v := m.(type) {
-	case *types.Named:
-		if v.Obj().Pkg() != nil && v.Obj().Pkg().Name() != x {
-			needExported = needExported && true
-		}
-		if !needExported {
-			return
-		}
-	}
+	//switch v := m.(type) {
+	//case *types.Named:
+	//	if v.Obj().Pkg() != nil && v.Obj().Pkg().Name() != x {
+	//		needExported = needExported && true
+	//	}
+	//	if !needExported {
+	//		return
+	//	}
+	//}
 
 	if v, ok := m.(methoder); ok && !initial && g.reuseDeepCopy(source, sink, v, false, generating, w) {
 		return
@@ -201,9 +202,11 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 	under := m.Underlying()
 	switch v := under.(type) {
 	case *types.Struct:
+		v.Tag(0)
 		for i := 0; i < v.NumFields(); i++ {
 			field := v.Field(i)
-			if needExported && !field.Exported() {
+			tagVal, _ := reflect.StructTag(v.Tag(i)).Lookup("deepcopy")
+			if (!field.Exported() && !needExported) || tagVal == "-" {
 				continue
 			}
 			fname := field.Name()
@@ -334,23 +337,20 @@ func (g Generator) walkType(source, sink, x string, m types.Type, w io.Writer, s
 		fmt.Fprintf(w, "}\n}\n")
 	// 只支持实现了DeepCopy方法的Interface
 	case *types.Interface:
-		fmt.Fprintf(w, "if %s != nil {\n", source)
-		named, ok := m.(*types.Named)
+		_, ok := m.(*types.Named)
 		if !ok {
 			log.Printf("not supported deepcopy unamed interface %s\n", sink)
 			return
 		}
-		originMethodName := g.methodName
-		g.methodName = g.methodName + named.Obj().Name()
+		fmt.Fprintf(w, "if %s != nil {\n", source)
 		if initial || !g.reuseDeepCopy(source, sink, v, false, generating, w) {
-			log.Printf("not supported deepcopy interface %s without %s method\n", sink, g.methodName)
-			g.methodName = originMethodName
+			fmt.Fprintf(w, "// not supported interface %s without %s method\n", sink, g.methodName)
+			fmt.Fprintf(w, "}\n")
 			return
 		}
-		g.methodName = originMethodName
 		fmt.Fprintf(w, "}\n")
 	case *types.Chan:
-		log.Fatalf("not supported deepcopy channel %s", sink)
+		log.Printf("[Error]not supported deepcopy channel %s\n", sink)
 		//	case *types.Chan:
 		//		kind := g.getElemType(v.Elem(), x)
 		//

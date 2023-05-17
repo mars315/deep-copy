@@ -34,6 +34,34 @@ type (
 	Alpha struct {
 		Version string
 	}
+
+	// PlayerBasic 玩家基础数据
+	PlayerBasic struct {
+		Level      int32  // 等级
+		Name       string // 名字
+		CurMapID   int64  // 主城所在的地图id
+		InitMapID  int64  // 常见角色时所在的地图，调试用
+		IsHideCity bool   //
+		Version    string //
+	}
+
+	// Player 玩家collection结构
+	Player struct {
+		PlayerID          int64        `bson:"_id" deepcopy:"-"` //
+		SessionID         int64        `bson:"-"`                //
+		Basic             *PlayerBasic // 基础数据
+		LastHeartBeatTime int64        `bson:"-" json:"-"` // 上次同步心跳时间
+		Ctl               Ctl          `bson:"-" json:"-"` // 控制器
+
+	}
+
+	// Ctl 暴露给player的活动接口
+	Ctl interface {
+		GetPlayerLatestVersion() string
+		GetFirstOpenTime() int64
+		PlayerDataInit(p *Player, dbLoaded bool)
+		PlayerUnloadCb(p *Player)
+	}
 )
 
 type typesVal []string
@@ -152,12 +180,12 @@ func main() {
 		log.Fatalln("Error initializing output file:", err)
 	}
 
+	defer output.Close()
 	err = run(generator, output, flag.Args()[0], typesF)
 	if err != nil {
 		log.Fatalln("Error generating deep copy method:", err)
 	}
 
-	output.Close()
 }
 
 func run(
