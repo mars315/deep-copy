@@ -13,6 +13,12 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+func init() {
+	flag.Var(&typesF, "type", "the concrete type. Multiple flags can be specified or comma-separated multiple types")
+	flag.Var(&skipsF, "skip", "comma-separated field/slice/map selectors to shallow copy. Multiple flags can be specified")
+	flag.Var(&outputF, "o", "the output file to write to. Defaults to deepcopy_gen.go on same dir")
+}
+
 var (
 	pointerReceiverF = flag.Bool("pointer-receiver", true, "the generated receiver type")
 	maxDepthF        = flag.Int("maxdepth", 0, "max depth of deep copying")
@@ -26,45 +32,14 @@ var (
 )
 
 type (
-	Foo struct {
-		ID   int64
-		Name string
-	}
+	typesVal []string
+	skipsVal deepcopy.SkipLists
 
-	Alpha struct {
-		Version string
-	}
-
-	// PlayerBasic 玩家基础数据
-	PlayerBasic struct {
-		Level      int32  // 等级
-		Name       string // 名字
-		CurMapID   int64  // 主城所在的地图id
-		InitMapID  int64  // 常见角色时所在的地图，调试用
-		IsHideCity bool   //
-		Version    string //
-	}
-
-	// Player 玩家collection结构
-	Player struct {
-		PlayerID          int64        `bson:"_id" deepcopy:"-"` //
-		SessionID         int64        `bson:"-"`                //
-		Basic             *PlayerBasic // 基础数据
-		LastHeartBeatTime int64        `bson:"-" json:"-"` // 上次同步心跳时间
-		Ctl               Ctl          `bson:"-" json:"-"` // 控制器
-
-	}
-
-	// Ctl 暴露给player的活动接口
-	Ctl interface {
-		GetPlayerLatestVersion() string
-		GetFirstOpenTime() int64
-		PlayerDataInit(p *Player, dbLoaded bool)
-		PlayerUnloadCb(p *Player)
+	outputVal struct {
+		file *os.File
+		name string
 	}
 )
-
-type typesVal []string
 
 func (f *typesVal) String() string {
 	return strings.Join(*f, ",")
@@ -75,8 +50,6 @@ func (f *typesVal) Set(v string) error {
 	*f = append(*f, list...)
 	return nil
 }
-
-type skipsVal deepcopy.SkipLists
 
 func (f *skipsVal) String() string {
 	parts := make([]string, 0, len(*f))
@@ -101,11 +74,6 @@ func (f *skipsVal) Set(v string) error {
 	*f = append(*f, set)
 
 	return nil
-}
-
-type outputVal struct {
-	file *os.File
-	name string
 }
 
 func (f *outputVal) String() string {
@@ -146,12 +114,6 @@ func (f *outputVal) Open(appendFile bool) (io.WriteCloser, error) {
 	}
 
 	return f.file, nil
-}
-
-func init() {
-	flag.Var(&typesF, "type", "the concrete type. Multiple flags can be specified or comma-separated multiple types")
-	flag.Var(&skipsF, "skip", "comma-separated field/slice/map selectors to shallow copy. Multiple flags can be specified")
-	flag.Var(&outputF, "o", "the output file to write to. Defaults to deepcopy_gen.go on same dir")
 }
 
 func main() {
